@@ -1,0 +1,11 @@
+# remove temporary files
+cd Diagrams
+rm Quasifuchsian Squarelimit
+cd ..
+rm *~
+rm *.log
+rm *.aux
+rm *.dyn_hi
+rm *.dyn_o
+rm *.hi
+rm *.o

@@ -1,0 +1,106 @@
+Managing your packages (i.e. libraries) used to be a real pain, but it has greatly
+improved in the last few years.  The issue is that if you need packages A and B,
+but they require different versions of package C, then you will not be able to build.
+You will have to wait until the authors of packages A and B release versions which
+depend on a common version of package C. Note that this problem is NOT unique to haskell.
+The solution is to have packages specify version bounds (i.e. ranges) for their
+dependencies.  Then a build tool called "cabal" can search through all of the possible
+versions of all of the packages and try to solve for a specific version of each package
+that satisfies all packages' version bounds. However, there may be no solution!
+
+This can happen if you install packages one at a time instead of all at once.
+For example, say package A works with versions 0.1 and 0.2 of package C, and
+package B works with version 0.2 and 0.3 of package C.  If you install A and B
+at the same time, cabal should be able to solve the constraints and install
+version 0.2.  However, if you install package B first, cabal may choose the
+newer version 0.3 (why not?), but then later it will not be able to install package A.
+In other words, cabal does not ensure builds are reproducible. This problem is
+exacerbated by the fact that until recently, packages were installed in a global
+database instead of a per project "sandbox".
+
+It would be good to note at this point that despite appearances, cabal is NOT
+a package manager (as in apt, yum, etc), it is a build tool; there is no
+"uninstall" (for various reasons), and cabal does NOT try to install system level
+dependencies (which is why I made the install scripts).
+
+One solution is to tell cabal to ignore the upper bounds on some or all packages
+and allow newer versions.  Often the upper bounds are overly restrictive and it will
+build just fine on a newer version.
+
+Cabal can also fail to find a solution simply because package authors can be slow to
+update their version bounds when a package they depend on changes.  Again, this
+happens with other languages and with large projects such as linux distributions.
+So how do they solve this problem? Curation. Recently FP Complete
+(a functional programming consulting company) developed the tool "stack" and
+help maintain an associated curated subset of hackage called stackage.  It still uses
+cabal behind the scenes, but long story short is that dependency management is
+basically a solved problem now.  Stackage consists of "snapshots" of packages that are
+guaranteed to build together, and adding additional external packages is usually trivial.
+You can add packages from hackage, github, a url, or a local directory.
+
+The number one goal of stack is to make builds reproducible and isolated (i.e. sandboxed)
+The excellent stack manual can be found at
+https://github.com/commercialhaskell/stack/blob/master/doc/GUIDE.md
+
+Note that cabal now has the ability to do Nix-style local builds, which solve many
+of the same problems as stack. For details, see
+https://www.haskell.org/cabal/users-guide/nix-local-build-overview.html
+However, for new users I still recommend using stack.
+
+
+
+
+
+
+
+
+
+First let's just add a package from stackage.  All we have to do is add it to the
+dependencies section of our package.yaml file!  That's it!  It's that simple!
+To use it we just run stack build, and then restart intero / emacs.  For a package which
+is on hackage but not stackage, we will also need to add it to the extra-deps section
+of our stack.yaml file.  When we stack build, we may be prompted to add more packages
+to the extra-deps section, or we may have to work a little harder.  For other
+packages we will have to supply a url, etc. in the packages section of stack.yaml
+
+Let's go through some examples.
+
+Let's say I want to add the z3 library from hackage, so first I add it to my .cabal file.
+When I stack build, I get the following error message:
+
+Error: While constructing the build plan, the following exceptions were encountered:
+In the dependencies for haskelltalk-0.1.0.0:
+    z3 must match -any, but the stack configuration has no specified version (latest applicable is 4.1.0)
+Recommended action: try adding the following to your extra-deps in /home/jfennick/uh-mfc/haskelltalk/stack.yaml:
+- z3-4.1.0
+
+What happened?  The situation is that the z3 library is on hackage but not stackage, so
+stack at least knows that it exists and can tell us to add it to our stack.yaml file.
+Be careful! Package names are case sensitive.
+Now we stack build again, but we get another error message:
+
+--  While building package z3-4.1.0 using:
+... some output omitted
+    Process exited with code: ExitFailure 1
+    Logs have been written to: /home/jfennick/uh-mfc/haskelltalk/.stack-work/logs/z3-4.1.0.log
+
+    Configuring z3-4.1.0...
+    Cabal-simple_mPHDZzAJ_1.24.2.0_ghc-8.0.2: Missing dependency on a foreign
+    library:
+    * Missing (or bad) header file: z3.h
+    * Missing C library: z3
+    This problem can usually be solved by installing the system package that
+    provides this library (you may need the "-dev" version). If the library is
+    already installed but in a non-standard location then you can use the flags
+    --extra-include-dirs= and --extra-lib-dirs= to specify where it is.
+    If the header file does exist, it may contain errors that are caught by the C
+    compiler at the preprocessing stage. In this case you can re-run configure
+    with the verbosity flag -v3 to see the error messages.
+
+While stack was trying to build the *haskell* library named z3, it couldn't find the *C* library
+named z3.  Again, stack and cabal are NOT package managers, but typically they will tell you
+when you need to install system level packages.  The tricky part is that sometimes the name
+of the system level package isn't obvious (take a look at those install scripts!).
+Protip: use synaptic to search for system packages with "z3" or "lib" or "dev" in the name.
+You can also use the command apt-cache search regex to search using a regular expression.
+But in this case we simply need to sudo apt-get install libz3-dev.  Then we stack build and we're done!

@@ -1,0 +1,119 @@
+echo "This script will install the system level packages needed for the haskell libraries used in this talk. Before running this script, if you would like to install nvidia cuda then uncomment the appropriate lines below, or install it manually. After running this script, copy (or append) ~/haskelltalk/dotemacs to ~/.emacs  This script is mostly automated, but you may be asked for your sudo password occasionally. Finally, note that this script may take a long time. ~(1 hr...)"
+
+read -p 'Abort this setup script? [Y/n]' -n 1 -r
+if [[ $REPLY =~ ^[Yy]$ ]] 
+then
+    echo 'Setup aborted.'
+    exit
+fi
+
+cd # Start in home directory
+
+# needed for intero
+sudo apt-get --yes install libtinfo-dev
+
+echo "Installing git version control"
+# Exference requires git
+sudo apt-get --yes install git
+
+
+
+
+#Some of the haskell libraries require native dependencies which stack does not install,
+#so we need to use the system package manager.  This works on linux, but if you are
+#on windows or OSX you will need to install some other way.
+
+echo "Installing fftw" # Needed for accelerate
+sudo apt-get --yes install libfftw3-dev
+
+# The following pairs of lines are needed for the accelerate library
+echo "Installing GL, GLU, GLUT, and libffi for accelerate"
+sudo apt-get --yes install libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev libffi-dev
+cd /usr/lib/x86_64-linux-gnu/
+sudo ln -s libffi.so libffi.so.7 # This is actually version 6; apparently it works.
+cd
+
+
+
+
+echo "Installing emacs text editor"
+sudo apt-get --yes  install emacs
+
+# The haskell package accelerate-cuda does not build on ghc >= 8.02 and is deprecated.
+# Instead, use the haskell package accelerate-llvm-ptx (which uses cuda), so install cuda if you want to use your (Nvidia) GPU.
+#echo "Installing nvidia cuda"
+#sudo apt-get install nvidia-cuda-toolkit
+
+echo "Installing the z3 and picosat theorem provers"
+sudo apt-get --yes install z3 picosat
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Uncomment your distro/version to add the llvm 8.0 repository to your list of sources
+# debian 9 stretch
+#echo "deb http://apt.llvm.org/stretch/ llvm-toolchain-stretch-8 main" > llvm8.0.list
+#echo "deb-src http://apt.llvm.org/stretch/ llvm-toolchain-stretch-8 main" >> llvm8.0.list
+# debian 10 buster
+#echo "deb http://apt.llvm.org/buster/ llvm-toolchain-buster-8 main" > llvm8.0.list
+#echo "deb-src http://apt.llvm.org/buster/ llvm-toolchain-buster-8 main" >> llvm8.0.list
+# ubuntu 18.04 bionic
+echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > llvm8.0.list
+echo "deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" >> llvm8.0.list
+# ubuntu 18.10 cosmic
+#echo "deb http://apt.llvm.org/cosmic/ llvm-toolchain-cosmic-8 main" > llvm8.0.list
+#echo "deb-src http://apt.llvm.org/cosmic/ llvm-toolchain-cosmic-8 main" >> llvm8.0.list
+# ubuntu 19.04 disco
+#echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco-8 main" > llvm8.0.list
+#echo "deb-src http://apt.llvm.org/disco/ llvm-toolchain-disco-8 main" >> llvm8.0.list
+sudo mv llvm8.0.list /etc/apt/sources.list.d/
+wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add
+sudo apt-get update
+
+sudo apt-get --yes install llvm-8-dev
+# Must remove llvm 6.0 & 7 or else it will try to link to both 6.0/7 and 8 at runtime and segfault
+# However, all reverse dependencies of 6.0/7 will also be uninstalled, so commented out by default.
+#sudo apt-get --yes remove libllvm6.0 libllvm7 
+
+echo "Installing VSCode"
+wget -O vscode.deb https://go.microsoft.com/fwlink/?LinkID=760868
+sudo apt-get install ./vscode.deb
+rm vscode.deb
+
+
+echo "Installing stack, the haskell build tool & curated subset of the hackage.org software repository"
+./getstack
+echo "Appending ~/.local/bin to your PATH environment variable in ~/.bashrc"
+echo "$(cat ~/.bashrc)"$'\n'"export PATH=~/.local/bin:$PATH" >> ~/.bashrc
+echo "Appending /usr/local/lib to your LD_LIBRARY_PATH environment variable in ~/.bashrc"
+echo "$(cat ~/.bashrc)"$'\n'"export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH" >> ~/.bashrc
+source ~/.bashrc
+
+time ~/haskelltalk/install_haskell_deps
+
+echo "Installing Haskell IDE Engine from source"
+git clone https://github.com/haskell/haskell-ide-engine --recursive
+cd haskell-ide-engine
+mkdir stackyamls
+mv *.yaml stackyamls # move all but the most recent *.yaml files to a subdrectory so they don't get built.
+mv stackyamls/stack-8.6.5.yaml stack-8.6.5.yaml
+mv stackyamls/shake.yaml shake.yaml
+mv stackyamls/stack.yaml stack.yaml
+sed -i 's/lts-13.23/lts-13.25/g' stack-8.6.5.yaml # change resolver to the one we are using
+./install.hs build
+cd ..
+
+echo "Finished!"
+
+# If your install goes bad, you can just
+# rm -rf ~/.stack ~/.emacs.d ~/haskelltalk/.stack-work
+# and then reinstall

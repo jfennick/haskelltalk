@@ -1,0 +1,108 @@
+echo "This script will install the system level packages needed for the haskell libraries used in this talk. Before running this script, if you would like to install nvidia cuda then uncomment the appropriate lines below, or install it manually. After running this script, copy (or append) ~/haskelltalk/dotemacs to ~/.emacs  This script is mostly automated, but you may be asked for your sudo password occasionally. Finally, note that this script may take a long time. ~(1 hr...)"
+
+read -p 'Abort this setup script? [Y/n]' -n 1 -r
+if [[ $REPLY =~ ^[Yy]$ ]] 
+then
+    echo 'Setup aborted.'
+    exit
+fi
+
+cd # Start in home directory
+
+# needed for intero
+sudo yum --assumeyes install ncurses-devel
+
+echo "Installing git version control"
+# Exference requires git
+sudo yum --assumeyes install git
+
+echo "Installing gmp and zlib" # Needed for intero
+sudo yum --assumeyes install gmp-devel zlib-devel
+
+#Some of the haskell libraries require native dependencies which stack does not install,
+#so we need to use the system package manager.  This works on linux, but if you are
+#on windows or OSX you will need to install some other way.
+
+echo "Installing fftw" # Needed for accelerate
+sudo yum --assumeyes install libfftw-devel
+
+# The following pairs of lines are needed for the accelerate library
+echo "Installing GL, GLU, GLUT, and libffi for accelerate"
+sudo yum --assumeyes install mesa-libGL-devel mesa-libGLU-devel freeglut-devel libffi-devel
+
+sudo ln -s /usr/lib64/libffi.so /usr/lib64/libffi.so.7 # This is actually version 6; apparently it works.
+
+
+
+echo "Installing emacs text editor"
+sudo yum --assumeyes  install emacs
+
+# The haskell package accelerate-cuda does not build on ghc >= 8.02 and is deprecated.
+# Instead, use the haskell package accelerate-llvm-ptx (which uses cuda), so install cuda if you want to use your (Nvidia) GPU.
+#echo "Installing nvidia cuda"
+#sudo yum --assumeyes install linux-headers-$(uname -r)
+#wget -nc http://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-10.1.168-1.x86_64.rpm
+#sudo rpm -i cuda-repo-rhel7-10.1.168-1.x86_64.rpm
+#sudo yum clean all
+#sudo yum --assumeyes install cuda
+
+echo "Installing the picosat theorem prover"
+sudo yum --assumeyes install picosat
+
+echo "Installing the z3 theorem prover from source"
+git clone https://github.com/Z3Prover/z3.git
+cd z3
+python scripts/mk_make.py
+cd build
+make
+sudo make install
+cd ../..
+
+echo "Installing llvm 8.0 from source"
+cd ~
+wget -nc http://releases.llvm.org/8.0.0/llvm-8.0.0.src.tar.xz
+tar -xf llvm-8.0.0.src.tar.xz
+sudo mkdir /tmp/build
+cd /tmp/build
+sudo cmake3 -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_TARGETS_TO_BUILD="X86;NVPTX;AMDGPU" ~/llvm-8.0.0.src
+# BEWARE! llvm takes ~7GB of hard drive space and ~2hrs to build...
+sudo cmake3 --build .
+sudo cmake3 --build . --target install
+cd ~/haskelltalk
+# Must remove llvm 6.0 or else it will try to link to both 6.0 and 8 at runtime and segfault
+# However, all reverse dependencies of 6.0 will also be uninstalled, so commented out by default.
+#sudo yum --assumeyes remove libllvm6.0
+
+echo "Installing VSCode"
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo'
+yum check-update
+sudo yum install code
+
+echo "Installing stack, the haskell build tool & curated subset of the hackage.org software repository"
+./getstack
+echo "Appending ~/.local/bin to your PATH environment variable in ~/.bashrc"
+echo "$(cat ~/.bashrc)"$'\n'"export PATH=~/.local/bin:$PATH" >> ~/.bashrc
+echo "Appending /usr/local/lib to your LD_LIBRARY_PATH environment variable in ~/.bashrc"
+echo "$(cat ~/.bashrc)"$'\n'"export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH" >> ~/.bashrc
+source ~/.bashrc
+
+time ~/haskelltalk/install_haskell_deps
+
+echo "Installing Haskell IDE Engine from source"
+git clone https://github.com/haskell/haskell-ide-engine --recursive
+cd haskell-ide-engine
+mkdir stackyamls
+mv *.yaml stackyamls # move all but the most recent *.yaml files to a subdrectory so they don't get built.
+mv stackyamls/stack-8.6.5.yaml stack-8.6.5.yaml
+mv stackyamls/shake.yaml shake.yaml
+sed -i 's/lts-13.23/lts-13.25/g' stack-8.6.5.yaml # change resolver to the one we are using
+sed -i 's/lts-13.23/lts-13.25/g' shake.yaml
+./install.hs build
+cd ..
+
+echo "Finished!"
+
+# If your install goes bad, you can just
+# rm -rf ~/.stack ~/.emacs.d ~/haskelltalk/.stack-work
+# and then reinstall

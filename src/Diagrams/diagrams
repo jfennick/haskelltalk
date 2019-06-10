@@ -1,0 +1,14 @@
+# More Diagrams examples can be found at http://projects.haskell.org/diagrams/gallery.html
+# Note: .lhs files are "literate" haskell files. Lines starting with > represent code,
+# and all other lines will be ignored.  This is useful for embedding haskell code in
+# an otherwise textual document i.e. a blog, etc.
+
+stack ghc -- -main-is Diagrams.Quasifuchsian Quasifuchsian.lhs -O2
+stack ghc -- -main-is Diagrams.Squarelimit   Squarelimit.lhs   -O2
+
+echo "This may take a few minutes."
+echo "Quasifuchsian"
+time ./Quasifuchsian -w 1024 -h 1024 -o Quasifuchsian.svg
+echo "Squarelimit"
+time ./Squarelimit -w 1024 -h 1024 -o Squarelimit.svg
+echo "finished"

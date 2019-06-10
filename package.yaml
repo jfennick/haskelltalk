@@ -1,0 +1,78 @@
+name:                haskelltalk
+version:             0.1.0.0
+github:              "jfennick/haskelltalk"
+license:             BSD3
+author:              "Jake Fennick"
+maintainer:          "jfennick@oceanit.com"
+copyright:           "2019 Jake Fennick"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/jfennick/haskelltalk#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- hlint
+- hoogle
+- transformers
+- mtl
+- lens
+- random
+# - ad, simple-reflect
+- diagrams
+- diagrams-lib
+- diagrams-svg
+- diagrams-gtk
+- colour
+- array
+- units
+- units-defs
+- QuickCheck
+- hedgehog
+- stm
+- accelerate
+- accelerate-examples
+- accelerate-llvm-native
+- time
+# To enable (Nvidia) GPU acceleration, uncomment these 3 lines and the lines in src/Accelerate.hs
+# - accelerate-llvm-ptx
+# - cuda
+# - cufft
+- sbv
+- picosat
+- picologic
+- arithmoi
+
+library:
+  source-dirs: src
+
+executables:
+  haskelltalk-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - haskelltalk
+
+tests:
+  haskelltalk-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - haskelltalk
