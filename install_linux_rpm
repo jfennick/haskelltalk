@@ -1,4 +1,4 @@
-echo "This script will install the system level packages needed for the haskell libraries used in this talk. Before running this script, if you would like to install nvidia cuda then uncomment the appropriate lines below, or install it manually. After running this script, copy (or append) ~/haskelltalk/dotemacs to ~/.emacs  This script is mostly automated, but you may be asked for your sudo password occasionally. Finally, note that this script may take a long time. ~(1 hr...)"
+echo "This script will install the system level packages needed for the haskell libraries used in this talk. Before running this script, if you would like to install nvidia cuda then uncomment the appropriate lines below, or install it manually. After running this script, copy (or append) ~/haskelltalk/dotemacs to ~/.emacs  This script is mostly automated, but you may be asked for your sudo password occasionally. Finally, note that this script may take a long time. ~(2 hrs...)"
 
 read -p 'Abort this setup script? [Y/n]' -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]] 
@@ -27,10 +27,11 @@ echo "Installing fftw" # Needed for accelerate
 sudo yum --assumeyes install libfftw-devel
 
 # The following pairs of lines are needed for the accelerate library
-echo "Installing GL, GLU, GLUT, and libffi for accelerate"
-sudo yum --assumeyes install mesa-libGL-devel mesa-libGLU-devel freeglut-devel libffi-devel
+echo "Installing GL, GLU, GLUT, libffi, and libcairo2 for accelerate"
+sudo yum --assumeyes install mesa-libGL-devel mesa-libGLU-devel freeglut-devel libffi-devel libcairo2-devel libgtk2.0-devel
 
 sudo ln -s /usr/lib64/libffi.so /usr/lib64/libffi.so.7 # This is actually version 6; apparently it works.
+sudo ln -s libpangocairo-1.0.so.0 libpangocairo-1.1.so.0 #version 1.1 is not available. hope this works.
 
 
 
@@ -59,6 +60,7 @@ sudo make install
 cd ../..
 
 echo "Installing llvm 8.0 from source"
+sudo yum --assumeyes install cmake3
 cd ~
 wget -nc http://releases.llvm.org/8.0.0/llvm-8.0.0.src.tar.xz
 tar -xf llvm-8.0.0.src.tar.xz
@@ -93,12 +95,10 @@ echo "Installing Haskell IDE Engine from source"
 git clone https://github.com/haskell/haskell-ide-engine --recursive
 cd haskell-ide-engine
 mkdir stackyamls
-mv *.yaml stackyamls # move all but the most recent *.yaml files to a subdrectory so they don't get built.
+-mv *.yaml stackyamls # move all but the most recent *.yaml files to a subdrectory so they don't get built.
 mv stackyamls/stack-8.6.5.yaml stack-8.6.5.yaml
 mv stackyamls/shake.yaml shake.yaml
-sed -i 's/lts-13.23/lts-13.25/g' stack-8.6.5.yaml # change resolver to the one we are using
-sed -i 's/lts-13.23/lts-13.25/g' shake.yaml
-./install.hs build
+./install.hs build-all
 cd ..
 
 echo "Finished!"

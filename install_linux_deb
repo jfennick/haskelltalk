@@ -1,4 +1,4 @@
-echo "This script will install the system level packages needed for the haskell libraries used in this talk. Before running this script, if you would like to install nvidia cuda then uncomment the appropriate lines below, or install it manually. After running this script, copy (or append) ~/haskelltalk/dotemacs to ~/.emacs  This script is mostly automated, but you may be asked for your sudo password occasionally. Finally, note that this script may take a long time. ~(1 hr...)"
+echo "This script will install the system level packages needed for the haskell libraries used in this talk. Before running this script, if you would like to install nvidia cuda then uncomment the appropriate lines below, or install it manually. After running this script, copy (or append) ~/haskelltalk/dotemacs to ~/.emacs  This script is mostly automated, but you may be asked for your sudo password occasionally. Finally, note that this script may take a long time. ~(2 hrs...)"
 
 read -p 'Abort this setup script? [Y/n]' -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]] 
@@ -27,10 +27,11 @@ echo "Installing fftw" # Needed for accelerate
 sudo apt-get --yes install libfftw3-dev
 
 # The following pairs of lines are needed for the accelerate library
-echo "Installing GL, GLU, GLUT, and libffi for accelerate"
-sudo apt-get --yes install libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev libffi-dev
+echo "Installing GL, GLU, GLUT, libffi, and libcairo2 for accelerate"
+sudo apt-get --yes install libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev libffi-dev libcairo2-dev libgtk2.0-dev
 cd /usr/lib/x86_64-linux-gnu/
 sudo ln -s libffi.so libffi.so.7 # This is actually version 6; apparently it works.
+sudo ln -s libpangocairo-1.0.so.0 libpangocairo-1.1.so.0 #version 1.1 is not available. hope this works.
 cd
 
 
@@ -104,12 +105,10 @@ echo "Installing Haskell IDE Engine from source"
 git clone https://github.com/haskell/haskell-ide-engine --recursive
 cd haskell-ide-engine
 mkdir stackyamls
-mv *.yaml stackyamls # move all but the most recent *.yaml files to a subdrectory so they don't get built.
+-mv *.yaml stackyamls # move all but the most recent *.yaml files to a subdrectory so they don't get built.
 mv stackyamls/stack-8.6.5.yaml stack-8.6.5.yaml
 mv stackyamls/shake.yaml shake.yaml
-mv stackyamls/stack.yaml stack.yaml
-sed -i 's/lts-13.23/lts-13.25/g' stack-8.6.5.yaml # change resolver to the one we are using
-./install.hs build
+./install.hs build-all
 cd ..
 
 echo "Finished!"

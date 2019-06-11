@@ -5,18 +5,14 @@ cd # Start in home directory so that common dependencies are shared in ~/.stack
 echo "Installing GHC, the Glorious Haskell Compiler"
 stack setup
 echo "Installing cabal build tool"
-stack install cabal-install
-stack install happy alex c2hs haskeline ghc-paths
-echo "Installing intero development tool"
-stack install intero
 echo "Installing hoogle documentation"
-stack install hoogle
-stack exec -- hoogle generate
 echo "Installing hlint code style suggestions"
-stack install hlint
+echo "Installing intero development tool"
+stack install cabal-install hoogle hlint intero happy alex c2hs haskeline ghc-paths
+stack exec -- hoogle generate
 
-echo "Building. The first time you do a full build may take a long time ~(1 hr...)"
+echo "Building. The first time you do a full build may take a long time ~(2 hrs...)"
 cd ~/haskelltalk
-stack build
+stack haddock --keep-going
 
 stack unpack accelerate-examples

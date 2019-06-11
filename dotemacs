@@ -10,3 +10,7 @@
 ;; Intero comes with ghc-mod, flycheck, company
 (package-install 'intero)
 (add-hook 'haskell-mode-hook 'intero-mode)
+
+;; Install Language Server Protocol for Haskell IDE Engine
+(package-install 'lsp-mode)
+(add-hook 'haskell-mode-hook #'lsp-mode)
